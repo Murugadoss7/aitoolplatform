@@ -8,12 +8,16 @@ A modern React application that provides text-to-speech, speech-to-text, and vid
 - **Text-to-Speech (TTS)**: Convert written text into natural-sounding speech using Azure OpenAI TTS with 6 high-quality voices and customizable parameters
 - **Speech-to-Text (STT)**: Transform audio recordings into accurate text transcriptions
 - **Video Creation**: Generate engaging videos from text prompts with AI-powered tools
+- **PDF Text Extract**: Extract text from PDF documents using Azure Document Intelligence and convert to Word format
 
 ### 🎨 User Interface
-- Clean, modern UI with shadcn/ui components
+- Clean, modern UI with shadcn/ui components and red brand theme
 - Responsive design that works on mobile, tablet, and desktop
 - Dark/Light mode toggle with system preference detection
-- Professional design system with consistent styling
+- Professional design system with sixredmarbles brand integration
+- Categorized navigation with dropdown menus for organized tool access
+- Centered dashboard layout with compact feature cards
+- Brand-consistent red color scheme throughout the application
 
 ### ⚙️ Technical Features
 - Built with React 18+ and TypeScript for type safety
@@ -52,6 +56,7 @@ A modern React application that provides text-to-speech, speech-to-text, and vid
    VITE_AZURE_OPENAI_TTS_DEPLOYMENT=gpt-4o-mini-tts
    VITE_AZURE_SPEECH_KEY=your_azure_speech_key
    VITE_AZURE_SPEECH_REGION=your_azure_speech_region
+   VITE_OCR_API_ENDPOINT=http://192.168.100.182/api/ocr
    ```
 
 3. **Start development server**
@@ -100,21 +105,29 @@ npm run preview  # Preview the production build
 - Click "Generate Video"
 - Preview and download the generated video
 
+### 5. PDF Text Extract
+- Go to **PDF Text Extract** page
+- Upload a PDF file (up to 100MB)
+- Monitor the extraction progress in the status list
+- Download the extracted text in Word (.docx) format when complete
+- View processing history and re-download previous extractions
+
 ## Project Structure
 
 ```
 src/
 ├── components/
-│   ├── ui/           # shadcn/ui components (Button, Card, Input, etc.)
-│   ├── features/     # Feature-specific components (FeatureCard)
+│   ├── ui/           # shadcn/ui components (Button, Card, Input, DropdownMenu, etc.)
+│   ├── features/     # Feature-specific components (FeatureCard with compact mode)
 │   ├── common/       # Shared components (FileUpload, AudioPlayer, VideoPlayer)
-│   └── layout/       # Layout components (Layout, ThemeProvider)
+│   └── layout/       # Layout components (Layout with categorized navigation, ThemeProvider)
 ├── pages/            # Main page components (Dashboard, TextToSpeech, etc.)
 ├── hooks/            # Custom React hooks
 ├── services/         # API service functions (azureService)
 ├── utils/            # Utility functions
 ├── types/            # TypeScript type definitions
 ├── constants/        # App constants (voices, languages, formats)
+├── context/          # Task management and theme contexts
 └── lib/              # Library utilities (utils.ts)
 ```
 
@@ -126,10 +139,11 @@ src/
 - **Layout**: Main application layout with navigation
 
 ### Pages
-- **Dashboard**: Feature overview and quick actions
+- **Dashboard**: Categorized tool overview with search functionality and centered layout
 - **TextToSpeech**: TTS interface with parameter controls
 - **SpeechToText**: STT interface with file upload
 - **VideoCreation**: Video generation with advanced options
+- **PdfTextExtract**: PDF text extraction with document intelligence (streamlined UI)
 - **Settings**: API configuration and app settings
 
 ### Common Components
@@ -137,6 +151,9 @@ src/
 - **AudioPlayer**: Full-featured audio player with controls
 - **VideoPlayer**: Video player with playback controls
 - **ThemeToggle**: Dark/light mode toggle button
+- **FeatureCard**: Compact and full-size cards with feature listings
+- **TaskProgress**: Real-time task tracking component
+- **Layout**: Responsive layout with categorized dropdown navigation
 
 ## Azure Integration
 
@@ -148,6 +165,10 @@ src/
 2. **Azure Speech Services**
    - Text-to-Speech (TTS) for audio generation
    - Speech-to-Text (STT) for transcription
+
+3. **Document Intelligence API**
+   - PDF text extraction and processing
+   - Converts PDF documents to Word format
 
 ### API Configuration
 The app uses environment variables for Azure configuration:
@@ -203,11 +224,16 @@ The app uses environment variables for Azure configuration:
    - Ensure proper CORS configuration
 
 2. **File Upload Issues**
-   - Check file size limits (25MB for audio, 10MB for images)
+   - Check file size limits (25MB for audio, 100MB for PDF files)
    - Verify supported file formats
    - Ensure stable internet connection
 
-3. **Audio/Video Playback Issues**
+3. **PDF Text Extract Issues**
+   - CORS errors: Ensure OCR API server allows requests from your domain
+   - Network connection errors: Verify OCR API server is running and accessible
+   - Check OCR API endpoint configuration in environment variables
+
+4. **Audio/Video Playback Issues**
    - Check browser compatibility
    - Verify file format support
    - Clear browser cache
@@ -216,6 +242,28 @@ The app uses environment variables for Azure configuration:
 - Check the Settings page for configuration status
 - Use browser developer tools to debug issues
 - Verify Azure service status
+
+## Recent Updates
+
+### UI/UX Improvements
+- **Categorized Navigation**: Tools organized into dropdown menus (AI Tools, Production Tools, HR Tools)
+- **Centered Dashboard**: Tool cards now center-aligned with compact design showing key features
+- **Brand Integration**: Implemented sixredmarbles brand colors throughout the application
+- **Settings Repositioning**: Moved Settings next to theme toggle for better UX
+- **Streamlined PDF Extract**: Cleaned up UI to match other tool pages
+- **Enhanced Feature Cards**: Added feature listings in compact mode for better tool discovery
+
+### Brand Identity
+- **Color Scheme**: Red-based primary colors matching sixredmarbles branding
+- **Logo Integration**: Sixredmarbles logo displayed in footer with brand elements
+- **Consistent Theming**: Both light and dark modes use red accent colors
+- **Header Branding**: AI logo updated with red gradient to match brand identity
+
+### Navigation Enhancements
+- **Dropdown Menus**: AI Tools and Production Tools grouped in organized dropdowns
+- **Responsive Design**: Navigation adapts properly across all screen sizes
+- **Active States**: Improved visual feedback for current page/section
+- **Mobile Optimization**: Categorized mobile menu with proper grouping
 
 ## License
 
@@ -235,3 +283,4 @@ This project is licensed under the MIT License.
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Icons from [Lucide](https://lucide.dev/)
 - Styled with [Tailwind CSS](https://tailwindcss.com/)
+- Brand identity by [sixredmarbles](https://sixredmarbles.com)

@@ -1,4 +1,4 @@
-export type TaskType = 'text-to-speech' | 'speech-to-text' | 'video-creation'
+export type TaskType = 'text-to-speech' | 'speech-to-text' | 'video-creation' | 'pdf-ocr'
 
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -61,7 +61,22 @@ export interface VideoTask extends BaseTask {
   jobId?: string
 }
 
-export type Task = TTSTask | STTTask | VideoTask
+export interface OCRTask extends BaseTask {
+  type: 'pdf-ocr'
+  request: {
+    fileName: string
+    fileSize: number
+    ocrType: 'azure'
+  }
+  result?: {
+    ocrJobId: number
+    outputDocxUrl?: string
+    outputJsonUrl?: string
+  }
+  ocrJobId?: number
+}
+
+export type Task = TTSTask | STTTask | VideoTask | OCRTask
 
 export interface TaskManagerState {
   tasks: Task[]

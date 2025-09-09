@@ -1,7 +1,7 @@
 import { useTaskManager } from '@/context/TaskManagerContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, Volume2, Mic, Video, X } from 'lucide-react'
+import { Loader2, Volume2, Mic, Video, X, FileText } from 'lucide-react'
 import { Task } from '@/types/taskManager'
 
 export function TaskProgress() {
@@ -19,6 +19,10 @@ export function TaskProgress() {
         return Mic
       case 'video-creation':
         return Video
+      case 'pdf-ocr':
+        return FileText
+      default:
+        return FileText
     }
   }
 
@@ -30,6 +34,10 @@ export function TaskProgress() {
         return 'Transcribing Audio'
       case 'video-creation':
         return 'Generating Video'
+      case 'pdf-ocr':
+        return 'Extracting PDF Text'
+      default:
+        return 'Processing'
     }
   }
 
@@ -41,6 +49,10 @@ export function TaskProgress() {
         return `File: ${(task as any).request.fileName}`
       case 'video-creation':
         return `Duration: ${(task as any).request.duration}s`
+      case 'pdf-ocr':
+        return `File: ${(task as any).request.fileName}`
+      default:
+        return 'Processing...'
     }
   }
 

@@ -4,7 +4,14 @@ export const VOICES = [
   { value: 'fable', label: 'Fable' },
   { value: 'onyx', label: 'Onyx' },
   { value: 'nova', label: 'Nova' },
-  { value: 'shimmer', label: 'Shimmer' }
+  { value: 'ash', label: 'Ash' },
+  { value: 'ballad', label: 'Ballad' },
+  { value: 'coral', label: 'Coral' },
+  { value: 'sage', label: 'Sage' },
+  { value: 'fable', label: 'Fable' },
+  { value: 'shimmer', label: 'Shimmer' },
+  { value: 'verse', label: 'Verse' }
+
 ]
 
 export const LANGUAGES = [

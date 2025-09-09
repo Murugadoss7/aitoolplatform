@@ -3,12 +3,16 @@ import {
   TTSConfig,
   STTConfig,
   VideoConfig,
+  OCRConfig,
   TTSRequest,
   STTRequest,
   VideoRequest,
+  OCRRequest,
   TTSResponse,
   STTResponse,
   VideoResponse,
+  OCRResponse,
+  OCRJobsResponse,
   VideoJob,
   ApiError
 } from '../types/azure'
@@ -17,6 +21,7 @@ class AzureService {
   private ttsConfig: TTSConfig
   private sttConfig: STTConfig
   private videoConfig: VideoConfig
+  private ocrConfig: OCRConfig
 
   constructor() {
     this.ttsConfig = {
@@ -40,6 +45,10 @@ class AzureService {
       deployment: import.meta.env.VITE_AZURE_VIDEO_DEPLOYMENT || ''
     }
 
+    this.ocrConfig = {
+      endpoint: import.meta.env.VITE_OCR_API_ENDPOINT || 'http://192.168.100.182/api/ocr'
+    }
+
     // Debug logging
     console.log('Azure Service Configurations:', {
       tts: {
@@ -61,6 +70,10 @@ class AzureService {
         apiKey: this.videoConfig.apiKey ? 'SET' : 'NOT SET',
         deployment: this.videoConfig.deployment || 'NOT SET',
         isConfigured: this.isVideoConfigured()
+      },
+      ocr: {
+        endpoint: this.ocrConfig.endpoint ? 'SET' : 'NOT SET',
+        isConfigured: this.isOCRConfigured()
       }
     })
   }
@@ -310,6 +323,10 @@ class AzureService {
     )
   }
 
+  isOCRConfigured(): boolean {
+    return !!(this.ocrConfig.endpoint)
+  }
+
   // Legacy method for backward compatibility
   isConfigured(): boolean {
     return this.isTTSConfigured()
@@ -334,6 +351,75 @@ class AzureService {
     if (config.apiKey) this.videoConfig.apiKey = config.apiKey
     if (config.apiVersion) this.videoConfig.apiVersion = config.apiVersion
     if (config.deployment) this.videoConfig.deployment = config.deployment
+  }
+
+  updateOCRConfig(config: Partial<OCRConfig>) {
+    if (config.endpoint) this.ocrConfig.endpoint = config.endpoint
+  }
+
+  async uploadPDFForOCR(request: OCRRequest): Promise<OCRResponse> {
+    if (!this.isOCRConfigured()) {
+      throw new Error('OCR API not configured. Please check your settings.')
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('pdf_file', request.pdfFile)
+      formData.append('ocr_type', request.ocrType)
+
+      const url = `${this.ocrConfig.endpoint}/jobs/`
+
+      console.log('OCR Upload Request URL:', url)
+      console.log('OCR Upload File:', request.pdfFile.name, `(${(request.pdfFile.size / 1024 / 1024).toFixed(2)}MB)`)
+
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 30000 // 30 second timeout
+      })
+
+      return response.data
+    } catch (error) {
+      throw this.handleError(error, 'PDF upload for OCR failed')
+    }
+  }
+
+  async getOCRJobs(): Promise<OCRJobsResponse> {
+    if (!this.isOCRConfigured()) {
+      throw new Error('OCR API not configured. Please check your settings.')
+    }
+
+    try {
+      const url = `${this.ocrConfig.endpoint}/jobs/`
+
+      console.log('OCR Jobs List Request URL:', url)
+
+      const response = await axios.get(url, {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+
+      return response.data
+    } catch (error) {
+      throw this.handleError(error, 'Fetching OCR jobs failed')
+    }
+  }
+
+  async downloadOCRResult(url: string): Promise<Blob> {
+    try {
+      console.log('OCR Download Request URL:', url)
+
+      const response = await axios.get(url, {
+        responseType: 'blob'
+      })
+
+      return response.data
+    } catch (error) {
+      throw this.handleError(error, 'Downloading OCR result failed')
+    }
   }
 }
 

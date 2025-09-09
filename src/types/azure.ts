@@ -19,6 +19,10 @@ export interface VideoConfig {
   deployment: string
 }
 
+export interface OCRConfig {
+  endpoint: string
+}
+
 // Legacy type for backward compatibility
 export interface AzureConfig {
   endpoint: string
@@ -56,6 +60,11 @@ export interface VideoRequest {
   height: number
 }
 
+export interface OCRRequest {
+  pdfFile: File
+  ocrType: 'azure'
+}
+
 export type AudioFormat = 'mp3' | 'opus' | 'aac' | 'flac' | 'wav' | 'pcm'
 export type RecognitionMode = 'interactive' | 'conversation' | 'dictation'
 export type VideoResolution = '720p' | '1080p' | '4k'
@@ -88,6 +97,28 @@ export interface VideoResponse {
   duration: number
   jobId?: string
   generationId?: string
+}
+
+export interface OCRResponse {
+  id: number
+  name: string
+  pdf_file: string
+  ocr_type: string
+  status: 'p' | 'c' | 'f' // pending, completed, failed
+  output_docx?: string
+  output_json?: string
+  html_folder?: string
+  error_description?: string
+  processed_on?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OCRJobsResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: OCRResponse[]
 }
 
 export interface VideoJob {

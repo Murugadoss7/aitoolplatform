@@ -1,64 +1,111 @@
+import { useState, useMemo } from 'react'
 import { FeatureCard } from '@/components/features/FeatureCard'
 import { TaskProgress } from '@/components/common/TaskProgress'
-import { Mic, Volume2, Video, Clock, FileText, MessageSquare } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Mic, Volume2, Video, MessageSquare, FileSearch, Search } from 'lucide-react'
+
+interface Tool {
+  title: string
+  description: string
+  icon: any
+  href: string
+  external?: boolean
+  features?: string[]
+}
+
+type ToolCategories = Record<string, Tool[]>
 
 export function Dashboard() {
-  const features = [
-    {
-      title: 'Text to Speech',
-      description: 'Convert written text into natural-sounding speech with customizable voice parameters.',
-      icon: Volume2,
-      href: '/text-to-speech',
-      features: [
-        'Multiple voice options',
-        'Adjustable speed and pitch',
-        'Various audio formats',
-        'Long text support',
-        'Download capabilities'
-      ]
-    },
-    {
-      title: 'Speech to Text',
-      description: 'Transform audio recordings into accurate text transcriptions with confidence scores.',
-      icon: Mic,
-      href: '/speech-to-text',
-      features: [
-        'Multiple language support',
-        'File upload or live recording',
-        'Confidence scoring',
-        'Editable transcripts',
-        'Export to text files'
-      ]
-    },
-    {
-      title: 'Video Creation',
-      description: 'Generate engaging videos from text prompts with customizable parameters and effects.',
-      icon: Video,
-      href: '/video-creation',
-      features: [
-        'AI-powered generation',
-        'Custom backgrounds',
-        'Text overlays',
-        'Multiple resolutions',
-        'Various frame rates'
-      ]
-    },
-    {
-      title: 'AI Chat',
-      description: 'Interactive AI chat with image upload capabilities. Content is secure and private.',
-      icon: MessageSquare,
-      href: 'https://srmmultichat.azurewebsites.net/',
-      external: true,
-      features: [
-        'Interactive AI conversations',
-        'Image upload support',
-        'Secure content handling',
-        'Multi-modal interactions',
-        'Privacy-focused design'
-      ]
-    }
-  ]
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Organized tools by category
+  const toolCategories: ToolCategories = {
+    'AI Tools': [
+      {
+        title: 'Text to Speech',
+        description: 'Convert written text into natural-sounding speech with customizable voice parameters.',
+        icon: Volume2,
+        href: '/text-to-speech',
+        features: [
+          '6 high-quality Azure voices',
+          'Customizable speed, pitch, volume',
+          'Multiple output formats (MP3, WAV)',
+          'Real-time audio preview'
+        ]
+      },
+      {
+        title: 'Speech to Text',
+        description: 'Transform audio recordings into accurate text transcriptions with confidence scores.',
+        icon: Mic,
+        href: '/speech-to-text',
+        features: [
+          'High-accuracy Azure Whisper',
+          'Multiple audio formats supported',
+          'Language auto-detection',
+          'Editable transcript output'
+        ]
+      },
+      {
+        title: 'Video Creation',
+        description: 'Generate engaging videos from text prompts with customizable parameters and effects.',
+        icon: Video,
+        href: '/video-creation',
+        features: [
+          'AI-powered video generation',
+          'Custom background images',
+          'Text overlay support',
+          'Multiple resolutions & formats'
+        ]
+      },
+      {
+        title: 'AI Chat',
+        description: 'Interactive AI chat with image upload capabilities. Content is secure and private.',
+        icon: MessageSquare,
+        href: 'https://srmmultichat.azurewebsites.net/',
+        external: true,
+        features: [
+          'Multi-modal AI conversations',
+          'Image upload & analysis',
+          'Secure & private chats',
+          'Real-time responses'
+        ]
+      }
+    ],
+    'Production Tools': [
+      {
+        title: 'PDF Text Extract',
+        description: 'Extract text from PDF documents using Azure Document Intelligence with high accuracy.',
+        icon: FileSearch,
+        href: '/pdf-text-extract',
+        features: [
+          'Azure Document Intelligence',
+          'High-accuracy OCR processing',
+          'Word document output',
+          'Batch processing support'
+        ]
+      }
+    ],
+    'HR Tools': [
+      // Empty for now, ready for future tools
+    ]
+  }
+
+  // Filter tools based on search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return toolCategories
+
+    const filtered: ToolCategories = {}
+    Object.entries(toolCategories).forEach(([category, tools]) => {
+      const matchingTools = tools.filter(tool =>
+        tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      if (matchingTools.length > 0) {
+        filtered[category] = matchingTools
+      }
+    })
+    return filtered
+  }, [searchQuery, toolCategories])
 
   return (
     <div className="space-y-8">
@@ -71,100 +118,44 @@ export function Dashboard() {
         </p>
       </div>
 
+      {/* Search Box */}
+      <div className="flex justify-center">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search tools..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       {/* Active Tasks */}
       <TaskProgress />
 
-      {/* Feature cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {features.map((feature) => (
-          <FeatureCard key={feature.title} {...feature} />
-        ))}
-      </div>
+      {/* Tool Categories */}
+      {Object.entries(filteredCategories).map(([category, tools]) => (
+        tools.length > 0 && (
+          <div key={category} className="space-y-4">
+            <h2 className="text-2xl font-semibold tracking-tight text-center">{category}</h2>
+            <div className="flex justify-center">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-6xl">
+                {tools.map((tool) => (
+                  <FeatureCard key={tool.title} {...tool} compact />
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      ))}
 
-      {/* Recent activity section */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-primary" />
-              <CardTitle>Recent Activity</CardTitle>
-            </div>
-            <CardDescription>Your latest conversions and creations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Volume2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Marketing Script TTS</p>
-                    <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Mic className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Meeting Transcription</p>
-                    <p className="text-xs text-muted-foreground">1 hour ago</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Product Demo Video</p>
-                    <p className="text-xs text-muted-foreground">3 hours ago</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <CardTitle>Quick Actions</CardTitle>
-            </div>
-            <CardDescription>Common tasks to get started quickly</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <button className="w-full p-3 bg-muted hover:bg-muted/80 rounded-lg text-left transition-colors">
-                <div className="flex items-center space-x-3">
-                  <Volume2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Convert text to speech</p>
-                    <p className="text-xs text-muted-foreground">Transform written content to audio</p>
-                  </div>
-                </div>
-              </button>
-              <button className="w-full p-3 bg-muted hover:bg-muted/80 rounded-lg text-left transition-colors">
-                <div className="flex items-center space-x-3">
-                  <Mic className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Transcribe audio file</p>
-                    <p className="text-xs text-muted-foreground">Upload audio for transcription</p>
-                  </div>
-                </div>
-              </button>
-              <button className="w-full p-3 bg-muted hover:bg-muted/80 rounded-lg text-left transition-colors">
-                <div className="flex items-center space-x-3">
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Create new video</p>
-                    <p className="text-xs text-muted-foreground">Generate video from text prompt</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* No results message */}
+      {searchQuery && Object.values(filteredCategories).every(tools => tools.length === 0) && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No tools found matching "{searchQuery}"</p>
+        </div>
+      )}
     </div>
   )
 }

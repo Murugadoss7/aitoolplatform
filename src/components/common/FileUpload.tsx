@@ -11,6 +11,8 @@ interface FileUploadProps {
   maxSizeMB?: number
   selectedFile?: File | null
   className?: string
+  placeholder?: string
+  supportedFormats?: string
 }
 
 export function FileUpload({
@@ -19,7 +21,9 @@ export function FileUpload({
   accept = 'audio/*',
   maxSizeMB = 50,
   selectedFile,
-  className
+  className,
+  placeholder = 'Drop your audio file here',
+  supportedFormats = 'Supported formats: MP3, WAV, M4A, OGG'
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -104,7 +108,7 @@ export function FileUpload({
         <div className="text-center space-y-4">
           <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
           <div>
-            <p className="text-lg font-medium">Drop your audio file here</p>
+            <p className="text-lg font-medium">{placeholder}</p>
             <p className="text-muted-foreground">
               or click to browse (max {maxSizeMB}MB)
             </p>
@@ -127,7 +131,7 @@ export function FileUpload({
             Select File
           </Button>
           <p className="text-xs text-muted-foreground">
-            Supported formats: MP3, WAV, M4A, OGG
+            {supportedFormats}
           </p>
         </div>
       </CardContent>
