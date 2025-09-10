@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { FileUpload } from '@/components/common/FileUpload'
-import { Loader2, FileText, Download, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, FileText, Download, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { azureService } from '@/services/azureService'
 import { useTaskManager } from '@/context/TaskManagerContext'
 import { TaskProgress } from '@/components/common/TaskProgress'
@@ -22,6 +22,17 @@ export function PdfTextExtract() {
   const [ocrJobs, setOCRJobs] = useState<OCRJobWithStatus[]>([])
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Search and pagination state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<{
+    count: number
+    next: string | null
+    previous: string | null
+    results: OCRJobWithStatus[]
+  } | null>(null)
+  const [isSearchMode, setIsSearchMode] = useState(false)
   
   const { addTask, updateTask, getTasksByType } = useTaskManager()
   const ocrTasks = getTasksByType('pdf-ocr')
@@ -94,10 +105,8 @@ export function PdfTextExtract() {
     }
   }
 
-  useEffect(() => {
-    loadOCRJobs()
-    // Only load jobs on component mount, no automatic polling
-  }, [])
+  // Removed automatic loading on component mount to prevent network errors
+  // Jobs will be loaded only when user clicks refresh button
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -202,6 +211,88 @@ export function PdfTextExtract() {
     }
   }
 
+  const handleSearch = async (query: string = searchQuery, pageUrl?: string) => {
+    if (!query.trim()) {
+      // Clear search and return to normal mode
+      setIsSearchMode(false)
+      setSearchResults(null)
+      setSearchQuery('')
+      return
+    }
+
+    try {
+      setIsSearching(true)
+      setError(null)
+      
+      const results = await azureService.searchOCRJobs(query, pageUrl)
+      
+      // Process search results with status
+      const resultsWithStatus: OCRJobWithStatus[] = results.results.map(job => {
+        let statusText = ''
+        let statusIcon = Clock
+        let canDownload = false
+
+        switch (job.status) {
+          case 'p':
+            statusText = 'In Progress'
+            statusIcon = Clock
+            break
+          case 'c':
+            statusText = 'Completed'
+            statusIcon = CheckCircle
+            canDownload = true
+            break
+          case 'f':
+            statusText = 'Failed'
+            statusIcon = XCircle
+            break
+          default:
+            statusText = 'Unknown'
+        }
+
+        return {
+          ...job,
+          statusText,
+          statusIcon,
+          canDownload
+        }
+      })
+
+      setSearchResults({
+        ...results,
+        results: resultsWithStatus
+      })
+      setIsSearchMode(true)
+    } catch (err: any) {
+      console.error('Search failed:', err)
+      setError(err instanceof Error ? err.message : 'Search failed')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value
+    setSearchQuery(query)
+    
+    // Auto-search after 3 characters
+    if (query.length >= 3) {
+      handleSearch(query)
+    } else if (query.length === 0) {
+      // Clear search when input is empty
+      handleSearch('')
+    }
+  }
+
+  const handlePagination = (pageUrl: string) => {
+    if (isSearchMode) {
+      handleSearch(searchQuery, pageUrl)
+    } else {
+      // For future: implement pagination for regular jobs list
+      console.log('Regular pagination not implemented yet')
+    }
+  }
+
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString() + ' ' + new Date(dateString).toLocaleTimeString()
@@ -232,6 +323,7 @@ export function PdfTextExtract() {
               selectedFile={selectedFile}
               placeholder="Drop your PDF file here"
               supportedFormats="Supported format: PDF"
+              compact={true}
             />
           </div>
 
@@ -244,6 +336,7 @@ export function PdfTextExtract() {
           <Button 
             onClick={handleUpload} 
             disabled={!selectedFile || isUploading || !azureService.isOCRConfigured()}
+            size="sm"
             className="w-full"
           >
             {isUploading ? (
@@ -258,6 +351,48 @@ export function PdfTextExtract() {
               </>
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Search Section */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex justify-center">
+            <div className="flex items-center space-x-2 w-full max-w-md">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents by filename..."
+                  value={searchQuery}
+                  onChange={handleSearchInputChange}
+                  className="pl-10"
+                />
+              </div>
+              <Button 
+                onClick={() => handleSearch(searchQuery)}
+                disabled={isSearching || !searchQuery.trim()}
+                size="default"
+              >
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </>
+                )}
+              </Button>
+              {isSearchMode && (
+                <Button 
+                  variant="outline"
+                  onClick={() => handleSearch('')}
+                  size="default"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -283,66 +418,120 @@ export function PdfTextExtract() {
               {isLoadingJobs ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Refresh'
+                ocrJobs.length === 0 ? 'Load Documents' : 'Refresh'
               )}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingJobs && ocrJobs.length === 0 ? (
+          {/* Show loading state */}
+          {(isLoadingJobs || isSearching) && (isSearchMode ? !searchResults : ocrJobs.length === 0) ? (
             <div className="text-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-              <p className="text-muted-foreground">Loading your documents...</p>
+              <p className="text-muted-foreground">
+                {isSearching ? 'Searching documents...' : 'Loading your documents...'}
+              </p>
             </div>
-          ) : ocrJobs.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No documents uploaded yet.</p>
-              <p className="text-sm text-muted-foreground">Upload your first PDF to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {ocrJobs.map((job) => {
-                const StatusIcon = job.statusIcon
-                return (
-                  <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <FileText className="h-8 w-8 text-primary" />
-                      <div>
-                        <p className="font-medium">{job.name}</p>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span>Uploaded: {formatDate(job.created_at)}</span>
-                          {job.processed_on && (
-                            <span>Processed: {formatDate(job.processed_on)}</span>
-                          )}
+          ) : /* Show search results or regular jobs */ 
+          (() => {
+            const currentJobs: OCRJobWithStatus[] = isSearchMode && searchResults ? searchResults.results : ocrJobs
+            const currentData = isSearchMode && searchResults ? searchResults : null
+            
+            return currentJobs.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {isSearchMode ? `No documents found matching "${searchQuery}"` : 'No documents uploaded yet.'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isSearchMode ? 'Try a different search term.' : 'Upload your first PDF to get started.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Results info */}
+                {isSearchMode && searchResults && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground border-b pb-2">
+                    <span>Found {searchResults.count} documents matching "{searchQuery}"</span>
+                  </div>
+                )}
+                
+                {/* Jobs list */}
+                {currentJobs.map((job) => {
+                  const StatusIcon = job.statusIcon
+                  return (
+                    <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <FileText className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="font-medium">{job.name}</p>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <span>Uploaded: {formatDate(job.created_at)}</span>
+                            {job.processed_on && (
+                              <span>Processed: {formatDate(job.processed_on)}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <StatusIcon className="h-4 w-4" />
-                        <span className="text-sm">{job.statusText}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <StatusIcon className="h-4 w-4" />
+                          <span className="text-sm">{job.statusText}</span>
+                        </div>
+                        {job.canDownload ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleDownload(job)}
+                            className="flex items-center space-x-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>Download</span>
+                          </Button>
+                        ) : (
+                          <Button size="sm" disabled>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                      {job.canDownload ? (
-                        <Button
-                          size="sm"
-                          onClick={() => handleDownload(job)}
-                          className="flex items-center space-x-2"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span>Download</span>
-                        </Button>
-                      ) : (
-                        <Button size="sm" disabled>
-                          <Download className="h-4 w-4" />
-                        </Button>
+                    </div>
+                  )
+                })}
+                
+                {/* Pagination */}
+                {currentData && (currentData.next || currentData.previous) && (
+                  <div className="flex items-center justify-center space-x-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => currentData.previous && handlePagination(currentData.previous)}
+                      disabled={!currentData.previous}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    
+                    <div className="text-sm text-muted-foreground px-4">
+                      {isSearchMode && searchResults && searchResults.count > 0 && (
+                        <span>
+                          {Math.min(searchResults.results.length, 20)} of {searchResults.count} results
+                        </span>
                       )}
                     </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => currentData.next && handlePagination(currentData.next)}
+                      disabled={!currentData.next}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                )}
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
     </div>

@@ -408,6 +408,41 @@ class AzureService {
     }
   }
 
+  async searchOCRJobs(searchQuery: string, page?: string): Promise<OCRJobsResponse> {
+    if (!this.isOCRConfigured()) {
+      throw new Error('OCR API not configured. Please check your settings.')
+    }
+
+    try {
+      const params = new URLSearchParams()
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim())
+      }
+      if (page) {
+        // Extract page parameter from next/previous URL if provided
+        const pageMatch = page.match(/[?&]page=(\d+)/)
+        if (pageMatch) {
+          params.append('page', pageMatch[1])
+        }
+      }
+
+      const url = `${this.ocrConfig.endpoint}/jobs/?${params.toString()}`
+
+      console.log('OCR Search Request URL:', url)
+
+      const response = await axios.get(url, {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+
+      return response.data
+    } catch (error) {
+      throw this.handleError(error, 'Searching OCR jobs failed')
+    }
+  }
+
   async downloadOCRResult(url: string): Promise<Blob> {
     try {
       console.log('OCR Download Request URL:', url)

@@ -8,7 +8,6 @@ export const VOICES = [
   { value: 'ballad', label: 'Ballad' },
   { value: 'coral', label: 'Coral' },
   { value: 'sage', label: 'Sage' },
-  { value: 'fable', label: 'Fable' },
   { value: 'shimmer', label: 'Shimmer' },
   { value: 'verse', label: 'Verse' }
 

@@ -108,7 +108,12 @@ npm run preview  # Preview the production build
 ### 5. PDF Text Extract
 - Go to **PDF Text Extract** page
 - Upload a PDF file (up to 100MB)
+- **Search documents**: Use the search box to find specific files by filename
+  - Auto-search starts after typing 3+ characters
+  - Manual search with search button
+  - Clear search to return to full document list
 - Monitor the extraction progress in the status list
+- **Navigate results**: Use pagination controls for large document lists
 - Download the extracted text in Word (.docx) format when complete
 - View processing history and re-download previous extractions
 
@@ -252,6 +257,7 @@ The app uses environment variables for Azure configuration:
 - **Settings Repositioning**: Moved Settings next to theme toggle for better UX
 - **Streamlined PDF Extract**: Cleaned up UI to match other tool pages
 - **Enhanced Feature Cards**: Added feature listings in compact mode for better tool discovery
+- **PDF Search & Pagination**: Added real-time search functionality and pagination for document management
 
 ### Brand Identity
 - **Color Scheme**: Red-based primary colors matching sixredmarbles branding

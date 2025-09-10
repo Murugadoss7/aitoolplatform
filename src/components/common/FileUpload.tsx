@@ -13,6 +13,7 @@ interface FileUploadProps {
   className?: string
   placeholder?: string
   supportedFormats?: string
+  compact?: boolean
 }
 
 export function FileUpload({
@@ -23,7 +24,8 @@ export function FileUpload({
   selectedFile,
   className,
   placeholder = 'Drop your audio file here',
-  supportedFormats = 'Supported formats: MP3, WAV, M4A, OGG'
+  supportedFormats = 'Supported formats: MP3, WAV, M4A, OGG',
+  compact = false
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -104,17 +106,18 @@ export function FileUpload({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <CardContent className="p-6">
-        <div className="text-center space-y-4">
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+      <CardContent className={compact ? "p-4" : "p-6"}>
+        <div className={`text-center ${compact ? "space-y-3" : "space-y-4"}`}>
+          <Upload className={`mx-auto text-muted-foreground ${compact ? "h-8 w-8" : "h-12 w-12"}`} />
           <div>
-            <p className="text-lg font-medium">{placeholder}</p>
-            <p className="text-muted-foreground">
+            <p className={`font-medium ${compact ? "text-base" : "text-lg"}`}>{placeholder}</p>
+            <p className={`text-muted-foreground ${compact ? "text-sm" : ""}`}>
               or click to browse (max {maxSizeMB}MB)
             </p>
           </div>
           <Button
             variant="outline"
+            size={compact ? "sm" : "default"}
             onClick={() => {
               const input = document.createElement('input')
               input.type = 'file'
