@@ -126,7 +126,7 @@ export function PdfTextExtract() {
 
   // Auto-refresh jobs every 30 seconds to update status of in-progress jobs
   useEffect(() => {
-    if (!azureService.isOCRConfigured()) return
+    if (!azureService.isOCRConfigured() || ocrJobs.length === 0) return
 
     const interval = setInterval(() => {
       // Only refresh if there are jobs in progress
@@ -581,11 +581,35 @@ export function PdfTextExtract() {
                     </Button>
                     
                     <div className="text-sm text-muted-foreground px-4">
-                      {currentData && currentData.count > 0 && (
-                        <span>
-                          {currentData.results.length} of {currentData.count} {isSearchMode ? 'results' : 'documents'}
-                        </span>
-                      )}
+                      {currentData && currentData.count > 0 && (() => {
+                        // Calculate current page range
+                        const totalItems = currentData.count
+                        const itemsPerPage = 10 // API default page size
+                        const currentPageItems = currentData.results.length
+                        
+                        // Determine the current page number based on the presence of previous/next
+                        let currentPage = 1
+                        if (currentData.next) {
+                          const nextMatch = currentData.next.match(/[?&]page=(\d+)/)
+                          if (nextMatch) {
+                            currentPage = parseInt(nextMatch[1]) - 1
+                          }
+                        } else if (currentData.previous) {
+                          const prevMatch = currentData.previous.match(/[?&]page=(\d+)/)
+                          if (prevMatch) {
+                            currentPage = parseInt(prevMatch[1]) + 1
+                          }
+                        }
+                        
+                        const startItem = (currentPage - 1) * itemsPerPage + 1
+                        const endItem = Math.min(startItem + currentPageItems - 1, totalItems)
+                        
+                        return (
+                          <span>
+                            {startItem}-{endItem} of {totalItems} {isSearchMode ? 'results' : 'documents'}
+                          </span>
+                        )
+                      })()}
                     </div>
                     
                     <Button
