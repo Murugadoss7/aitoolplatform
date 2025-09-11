@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { FileUpload } from '@/components/common/FileUpload'
-import { Loader2, FileText, Download, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, FileText, Download, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { azureService } from '@/services/azureService'
 import { useTaskManager } from '@/context/TaskManagerContext'
 import { TaskProgress } from '@/components/common/TaskProgress'
@@ -124,20 +124,16 @@ export function PdfTextExtract() {
     }
   }, [])
 
-  // Auto-refresh jobs every 30 seconds to update status of in-progress jobs
-  useEffect(() => {
-    if (!azureService.isOCRConfigured() || ocrJobs.length === 0) return
+  // Remove auto-refresh - users will manually refresh individual jobs
 
-    const interval = setInterval(() => {
-      // Only refresh if there are jobs in progress
-      const hasInProgressJobs = ocrJobs.some(job => job.status === 'p')
-      if (hasInProgressJobs) {
-        loadOCRJobs()
-      }
-    }, 30000) // 30 seconds
-
-    return () => clearInterval(interval)
-  }, [ocrJobs])
+  const handleRefreshJob = async () => {
+    // Refresh the entire jobs list to get updated status
+    if (isSearchMode) {
+      await handleSearch(searchQuery)
+    } else {
+      await loadOCRJobs()
+    }
+  }
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -549,10 +545,21 @@ export function PdfTextExtract() {
                             <span>Download</span>
                           </Button>
                         ) : job.status === 'p' ? (
-                          <Button size="sm" disabled className="bg-yellow-100 text-yellow-600">
-                            <Clock className="h-4 w-4 animate-pulse mr-1" />
-                            Processing...
-                          </Button>
+                          <div className="flex items-center space-x-2">
+                            <Button size="sm" disabled className="bg-yellow-100 text-yellow-600">
+                              <Clock className="h-4 w-4 animate-pulse mr-1" />
+                              Processing...
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleRefreshJob}
+                              className="h-8 w-8 p-0"
+                              title="Refresh status"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </div>
                         ) : job.status === 'f' ? (
                           <Button size="sm" disabled className="bg-red-100 text-red-600">
                             <XCircle className="h-4 w-4" />
@@ -589,17 +596,18 @@ export function PdfTextExtract() {
                         
                         // Determine the current page number based on the presence of previous/next
                         let currentPage = 1
-                        if (currentData.next) {
-                          const nextMatch = currentData.next.match(/[?&]page=(\d+)/)
-                          if (nextMatch) {
-                            currentPage = parseInt(nextMatch[1]) - 1
-                          }
-                        } else if (currentData.previous) {
+                        if (currentData.previous) {
+                          // If there's a previous page, extract its page number and add 1
                           const prevMatch = currentData.previous.match(/[?&]page=(\d+)/)
                           if (prevMatch) {
                             currentPage = parseInt(prevMatch[1]) + 1
+                          } else {
+                            // Previous exists but no page number means we're on page 2
+                            currentPage = 2
                           }
                         }
+                        // If no previous but there's next, we're on page 1
+                        // If neither previous nor next, we're on page 1 with all items fitting on one page
                         
                         const startItem = (currentPage - 1) * itemsPerPage + 1
                         const endItem = Math.min(startItem + currentPageItems - 1, totalItems)
