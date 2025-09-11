@@ -22,6 +22,12 @@ export function PdfTextExtract() {
   const [ocrJobs, setOCRJobs] = useState<OCRJobWithStatus[]>([])
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ocrJobsData, setOCRJobsData] = useState<{
+    count: number
+    next: string | null
+    previous: string | null
+    results: OCRJobWithStatus[]
+  } | null>(null)
   
   // Search and pagination state
   const [searchQuery, setSearchQuery] = useState('')
@@ -40,7 +46,7 @@ export function PdfTextExtract() {
     task.status === 'processing' || task.status === 'pending'
   )
 
-  const loadOCRJobs = async () => {
+  const loadOCRJobs = async (pageUrl?: string) => {
     if (!azureService.isOCRConfigured()) {
       setError('OCR API not configured. Please check your settings.')
       return
@@ -49,7 +55,7 @@ export function PdfTextExtract() {
     try {
       setIsLoadingJobs(true)
       setError(null)
-      const response: OCRJobsResponse = await azureService.getOCRJobs()
+      const response: OCRJobsResponse = await azureService.getOCRJobs(pageUrl)
       
       const jobsWithStatus: OCRJobWithStatus[] = response.results.map(job => {
         let statusText = ''
@@ -83,6 +89,12 @@ export function PdfTextExtract() {
       })
 
       setOCRJobs(jobsWithStatus)
+      setOCRJobsData({
+        count: response.count,
+        next: response.next,
+        previous: response.previous,
+        results: jobsWithStatus
+      })
     } catch (err: any) {
       console.error('Failed to load OCR jobs:', err)
       let errorMessage = 'Failed to load OCR jobs'
@@ -325,8 +337,8 @@ export function PdfTextExtract() {
     if (isSearchMode) {
       handleSearch(searchQuery, pageUrl)
     } else {
-      // For future: implement pagination for regular jobs list
-      console.log('Regular pagination not implemented yet')
+      // Handle pagination for regular jobs list
+      loadOCRJobs(pageUrl)
     }
   }
 
@@ -448,7 +460,7 @@ export function PdfTextExtract() {
             </div>
             <Button 
               variant="outline" 
-              onClick={loadOCRJobs}
+              onClick={() => loadOCRJobs()}
               disabled={isLoadingJobs}
               size="sm"
             >
@@ -472,7 +484,7 @@ export function PdfTextExtract() {
           ) : /* Show search results or regular jobs */ 
           (() => {
             const currentJobs: OCRJobWithStatus[] = isSearchMode && searchResults ? searchResults.results : ocrJobs
-            const currentData = isSearchMode && searchResults ? searchResults : null
+            const currentData = isSearchMode && searchResults ? searchResults : ocrJobsData
             
             return currentJobs.length === 0 ? (
               <div className="text-center py-8">
@@ -569,9 +581,9 @@ export function PdfTextExtract() {
                     </Button>
                     
                     <div className="text-sm text-muted-foreground px-4">
-                      {isSearchMode && searchResults && searchResults.count > 0 && (
+                      {currentData && currentData.count > 0 && (
                         <span>
-                          {Math.min(searchResults.results.length, 20)} of {searchResults.count} results
+                          {currentData.results.length} of {currentData.count} {isSearchMode ? 'results' : 'documents'}
                         </span>
                       )}
                     </div>
