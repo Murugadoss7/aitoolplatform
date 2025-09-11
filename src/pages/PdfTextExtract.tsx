@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,12 @@ export function PdfTextExtract() {
   const [ocrJobs, setOCRJobs] = useState<OCRJobWithStatus[]>([])
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ocrJobsData, setOCRJobsData] = useState<{
+    count: number
+    next: string | null
+    previous: string | null
+    results: OCRJobWithStatus[]
+  } | null>(null)
   
   // Search and pagination state
   const [searchQuery, setSearchQuery] = useState('')
@@ -40,7 +46,7 @@ export function PdfTextExtract() {
     task.status === 'processing' || task.status === 'pending'
   )
 
-  const loadOCRJobs = async () => {
+  const loadOCRJobs = async (pageUrl?: string) => {
     if (!azureService.isOCRConfigured()) {
       setError('OCR API not configured. Please check your settings.')
       return
@@ -49,7 +55,7 @@ export function PdfTextExtract() {
     try {
       setIsLoadingJobs(true)
       setError(null)
-      const response: OCRJobsResponse = await azureService.getOCRJobs()
+      const response: OCRJobsResponse = await azureService.getOCRJobs(pageUrl)
       
       const jobsWithStatus: OCRJobWithStatus[] = response.results.map(job => {
         let statusText = ''
@@ -83,6 +89,12 @@ export function PdfTextExtract() {
       })
 
       setOCRJobs(jobsWithStatus)
+      setOCRJobsData({
+        count: response.count,
+        next: response.next,
+        previous: response.previous,
+        results: jobsWithStatus
+      })
     } catch (err: any) {
       console.error('Failed to load OCR jobs:', err)
       let errorMessage = 'Failed to load OCR jobs'
@@ -105,8 +117,27 @@ export function PdfTextExtract() {
     }
   }
 
-  // Removed automatic loading on component mount to prevent network errors
-  // Jobs will be loaded only when user clicks refresh button
+  // Auto-load documents when component mounts
+  useEffect(() => {
+    if (azureService.isOCRConfigured()) {
+      loadOCRJobs()
+    }
+  }, [])
+
+  // Auto-refresh jobs every 30 seconds to update status of in-progress jobs
+  useEffect(() => {
+    if (!azureService.isOCRConfigured()) return
+
+    const interval = setInterval(() => {
+      // Only refresh if there are jobs in progress
+      const hasInProgressJobs = ocrJobs.some(job => job.status === 'p')
+      if (hasInProgressJobs) {
+        loadOCRJobs()
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [ocrJobs])
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -154,6 +185,20 @@ export function PdfTextExtract() {
       // Upload the file
       const result = await azureService.uploadPDFForOCR(request)
 
+      // Create new job object for immediate display
+      const newJob: OCRJobWithStatus = {
+        ...result,
+        statusText: 'In Progress',
+        statusIcon: Clock,
+        canDownload: false,
+        name: selectedFile.name,
+        created_at: new Date().toISOString(),
+        processed_on: undefined
+      }
+
+      // Add new job to the top of the list for immediate visibility
+      setOCRJobs(prevJobs => [newJob, ...prevJobs])
+
       // Update task with result
       updateTask(taskId, {
         status: 'completed',
@@ -166,9 +211,13 @@ export function PdfTextExtract() {
         ocrJobId: result.id
       })
 
-      // Clear selected file and refresh jobs list
+      // Clear selected file
       setSelectedFile(null)
-      await loadOCRJobs()
+
+      // Refresh jobs list to get updated status
+      setTimeout(() => {
+        loadOCRJobs()
+      }, 1000)
 
     } catch (err) {
       console.error('Upload failed:', err)
@@ -288,8 +337,8 @@ export function PdfTextExtract() {
     if (isSearchMode) {
       handleSearch(searchQuery, pageUrl)
     } else {
-      // For future: implement pagination for regular jobs list
-      console.log('Regular pagination not implemented yet')
+      // Handle pagination for regular jobs list
+      loadOCRJobs(pageUrl)
     }
   }
 
@@ -411,7 +460,7 @@ export function PdfTextExtract() {
             </div>
             <Button 
               variant="outline" 
-              onClick={loadOCRJobs}
+              onClick={() => loadOCRJobs()}
               disabled={isLoadingJobs}
               size="sm"
             >
@@ -435,7 +484,7 @@ export function PdfTextExtract() {
           ) : /* Show search results or regular jobs */ 
           (() => {
             const currentJobs: OCRJobWithStatus[] = isSearchMode && searchResults ? searchResults.results : ocrJobs
-            const currentData = isSearchMode && searchResults ? searchResults : null
+            const currentData = isSearchMode && searchResults ? searchResults : ocrJobsData
             
             return currentJobs.length === 0 ? (
               <div className="text-center py-8">
@@ -460,7 +509,11 @@ export function PdfTextExtract() {
                 {currentJobs.map((job) => {
                   const StatusIcon = job.statusIcon
                   return (
-                    <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={job.id} className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
+                      job.status === 'p' ? 'border-yellow-200 bg-yellow-50/50' : 
+                      job.status === 'c' ? 'border-green-200 bg-green-50/50' : 
+                      job.status === 'f' ? 'border-red-200 bg-red-50/50' : 'border-gray-200'
+                    }`}>
                       <div className="flex items-center space-x-4">
                         <FileText className="h-8 w-8 text-primary" />
                         <div>
@@ -475,17 +528,34 @@ export function PdfTextExtract() {
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          <StatusIcon className="h-4 w-4" />
-                          <span className="text-sm">{job.statusText}</span>
+                          <StatusIcon className={`h-4 w-4 ${
+                            job.status === 'p' ? 'text-yellow-500 animate-pulse' : 
+                            job.status === 'c' ? 'text-green-500' : 
+                            job.status === 'f' ? 'text-red-500' : 'text-gray-400'
+                          }`} />
+                          <span className={`text-sm font-medium ${
+                            job.status === 'p' ? 'text-yellow-600' : 
+                            job.status === 'c' ? 'text-green-600' : 
+                            job.status === 'f' ? 'text-red-600' : 'text-gray-500'
+                          }`}>{job.statusText}</span>
                         </div>
                         {job.canDownload ? (
                           <Button
                             size="sm"
                             onClick={() => handleDownload(job)}
-                            className="flex items-center space-x-2"
+                            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                           >
                             <Download className="h-4 w-4" />
                             <span>Download</span>
+                          </Button>
+                        ) : job.status === 'p' ? (
+                          <Button size="sm" disabled className="bg-yellow-100 text-yellow-600">
+                            <Clock className="h-4 w-4 animate-pulse mr-1" />
+                            Processing...
+                          </Button>
+                        ) : job.status === 'f' ? (
+                          <Button size="sm" disabled className="bg-red-100 text-red-600">
+                            <XCircle className="h-4 w-4" />
                           </Button>
                         ) : (
                           <Button size="sm" disabled>
@@ -511,9 +581,9 @@ export function PdfTextExtract() {
                     </Button>
                     
                     <div className="text-sm text-muted-foreground px-4">
-                      {isSearchMode && searchResults && searchResults.count > 0 && (
+                      {currentData && currentData.count > 0 && (
                         <span>
-                          {Math.min(searchResults.results.length, 20)} of {searchResults.count} results
+                          {currentData.results.length} of {currentData.count} {isSearchMode ? 'results' : 'documents'}
                         </span>
                       )}
                     </div>

@@ -385,13 +385,24 @@ class AzureService {
     }
   }
 
-  async getOCRJobs(): Promise<OCRJobsResponse> {
+  async getOCRJobs(pageUrl?: string): Promise<OCRJobsResponse> {
     if (!this.isOCRConfigured()) {
       throw new Error('OCR API not configured. Please check your settings.')
     }
 
     try {
-      const url = `${this.ocrConfig.endpoint}/jobs/`
+      let url = `${this.ocrConfig.endpoint}/jobs/`
+      
+      // Handle pagination - extract page number from pageUrl if provided
+      if (pageUrl) {
+        const pageMatch = pageUrl.match(/[?&]page=(\d+)/)
+        if (pageMatch) {
+          url += `?page=${pageMatch[1]}`
+        } else if (pageUrl.startsWith('http')) {
+          // Use the full URL if it's a complete pagination URL
+          url = pageUrl
+        }
+      }
 
       console.log('OCR Jobs List Request URL:', url)
 
