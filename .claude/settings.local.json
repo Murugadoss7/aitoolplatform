@@ -16,7 +16,11 @@
       "Bash(npm run lint)",
       "Bash(git add:*)",
       "Bash(git fetch:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
