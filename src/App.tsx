@@ -7,6 +7,7 @@ import { TextToSpeech } from './pages/TextToSpeech'
 import { SpeechToText } from './pages/SpeechToText'
 import { VideoCreation } from './pages/VideoCreation'
 import { PdfTextExtract } from './pages/PdfTextExtract'
+import { PdfImageExtract } from './pages/PdfImageExtract'
 import { Settings } from './pages/Settings'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/speech-to-text" element={<SpeechToText />} />
             <Route path="/video-creation" element={<VideoCreation />} />
             <Route path="/pdf-text-extract" element={<PdfTextExtract />} />
+            <Route path="/pdf-image-extract" element={<PdfImageExtract />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>

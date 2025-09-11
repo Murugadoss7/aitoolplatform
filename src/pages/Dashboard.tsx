@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { FeatureCard } from '@/components/features/FeatureCard'
 import { TaskProgress } from '@/components/common/TaskProgress'
 import { Input } from '@/components/ui/input'
-import { Mic, Volume2, Video, MessageSquare, FileSearch, Search } from 'lucide-react'
+import { Mic, Volume2, Video, MessageSquare, FileSearch, Search, Image } from 'lucide-react'
 
 interface Tool {
   title: string
@@ -81,6 +81,18 @@ export function Dashboard() {
           'Azure Document Intelligence',
           'High-accuracy OCR processing',
           'Word document output',
+          'Batch processing support'
+        ]
+      },
+      {
+        title: 'Image Extract from PDF',
+        description: 'Extract images from PDF documents and create an Excel file with images and corresponding page numbers.',
+        icon: Image,
+        href: '/pdf-image-extract',
+        features: [
+          'Standalone local tool',
+          'Extract all images from PDFs',
+          'Excel output with page numbers',
           'Batch processing support'
         ]
       }

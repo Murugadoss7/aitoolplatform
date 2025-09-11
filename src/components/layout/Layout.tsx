@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Mic, Volume2, Video, Settings, Home, Menu, X, FileText, ChevronDown } from 'lucide-react'
+import { Mic, Volume2, Video, Settings, Home, Menu, X, FileText, ChevronDown, Image } from 'lucide-react'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -31,6 +31,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Speech to Text', href: '/speech-to-text', icon: Mic, category: 'AI Tools' },
     { name: 'Video Creation', href: '/video-creation', icon: Video, category: 'AI Tools' },
     { name: 'PDF Text Extract', href: '/pdf-text-extract', icon: FileText, category: 'Production Tools' },
+    { name: 'PDF Image Extract', href: '/pdf-image-extract', icon: Image, category: 'Production Tools' },
   ]
 
   // Settings is handled separately as it goes with theme toggle
