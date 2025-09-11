@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -105,8 +105,27 @@ export function PdfTextExtract() {
     }
   }
 
-  // Removed automatic loading on component mount to prevent network errors
-  // Jobs will be loaded only when user clicks refresh button
+  // Auto-load documents when component mounts
+  useEffect(() => {
+    if (azureService.isOCRConfigured()) {
+      loadOCRJobs()
+    }
+  }, [])
+
+  // Auto-refresh jobs every 30 seconds to update status of in-progress jobs
+  useEffect(() => {
+    if (!azureService.isOCRConfigured()) return
+
+    const interval = setInterval(() => {
+      // Only refresh if there are jobs in progress
+      const hasInProgressJobs = ocrJobs.some(job => job.status === 'p')
+      if (hasInProgressJobs) {
+        loadOCRJobs()
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [ocrJobs])
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -154,6 +173,20 @@ export function PdfTextExtract() {
       // Upload the file
       const result = await azureService.uploadPDFForOCR(request)
 
+      // Create new job object for immediate display
+      const newJob: OCRJobWithStatus = {
+        ...result,
+        statusText: 'In Progress',
+        statusIcon: Clock,
+        canDownload: false,
+        name: selectedFile.name,
+        created_at: new Date().toISOString(),
+        processed_on: undefined
+      }
+
+      // Add new job to the top of the list for immediate visibility
+      setOCRJobs(prevJobs => [newJob, ...prevJobs])
+
       // Update task with result
       updateTask(taskId, {
         status: 'completed',
@@ -166,9 +199,13 @@ export function PdfTextExtract() {
         ocrJobId: result.id
       })
 
-      // Clear selected file and refresh jobs list
+      // Clear selected file
       setSelectedFile(null)
-      await loadOCRJobs()
+
+      // Refresh jobs list to get updated status
+      setTimeout(() => {
+        loadOCRJobs()
+      }, 1000)
 
     } catch (err) {
       console.error('Upload failed:', err)
@@ -460,7 +497,11 @@ export function PdfTextExtract() {
                 {currentJobs.map((job) => {
                   const StatusIcon = job.statusIcon
                   return (
-                    <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={job.id} className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
+                      job.status === 'p' ? 'border-yellow-200 bg-yellow-50/50' : 
+                      job.status === 'c' ? 'border-green-200 bg-green-50/50' : 
+                      job.status === 'f' ? 'border-red-200 bg-red-50/50' : 'border-gray-200'
+                    }`}>
                       <div className="flex items-center space-x-4">
                         <FileText className="h-8 w-8 text-primary" />
                         <div>
@@ -475,17 +516,34 @@ export function PdfTextExtract() {
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          <StatusIcon className="h-4 w-4" />
-                          <span className="text-sm">{job.statusText}</span>
+                          <StatusIcon className={`h-4 w-4 ${
+                            job.status === 'p' ? 'text-yellow-500 animate-pulse' : 
+                            job.status === 'c' ? 'text-green-500' : 
+                            job.status === 'f' ? 'text-red-500' : 'text-gray-400'
+                          }`} />
+                          <span className={`text-sm font-medium ${
+                            job.status === 'p' ? 'text-yellow-600' : 
+                            job.status === 'c' ? 'text-green-600' : 
+                            job.status === 'f' ? 'text-red-600' : 'text-gray-500'
+                          }`}>{job.statusText}</span>
                         </div>
                         {job.canDownload ? (
                           <Button
                             size="sm"
                             onClick={() => handleDownload(job)}
-                            className="flex items-center space-x-2"
+                            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                           >
                             <Download className="h-4 w-4" />
                             <span>Download</span>
+                          </Button>
+                        ) : job.status === 'p' ? (
+                          <Button size="sm" disabled className="bg-yellow-100 text-yellow-600">
+                            <Clock className="h-4 w-4 animate-pulse mr-1" />
+                            Processing...
+                          </Button>
+                        ) : job.status === 'f' ? (
+                          <Button size="sm" disabled className="bg-red-100 text-red-600">
+                            <XCircle className="h-4 w-4" />
                           </Button>
                         ) : (
                           <Button size="sm" disabled>
